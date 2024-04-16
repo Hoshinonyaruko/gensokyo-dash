@@ -69,13 +69,11 @@
 
       <div>
         <!-- 输入控件 -->
-        <q-select
+        <q-input
           filled
-          v-model="rank"
-          :options="rankOptions"
-          option-value="value"
-          option-label="label"
-          label="选择排名"
+          type="number"
+          v-model.number="rank"
+          label="输入排名"
           class="q-ma-md"
         />
 
@@ -174,12 +172,6 @@ const dayOptions = ref([
   { label: '15天', value: 15 },
   { label: '30天', value: 30 },
 ]);
-
-const rankOptions = [
-  { label: '10', value: 10 },
-  { label: '20', value: 20 },
-  { label: '50', value: 50 },
-];
 
 const robotStatuses = ref([]);
 const onlineData = ref([]);
