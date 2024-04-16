@@ -204,10 +204,10 @@ func FetchTopCommands(db *sql.DB, selfId int64, rank int) ([]CommandStat, error)
 }
 
 func FetchTopDailyCommands(db *sql.DB, selfId int64, date time.Time, rank int) ([]CommandStat, error) {
-	query := `SELECT command_name, self_id, messages_sent, last_call_timestamp 
+	query := `SELECT command_name, self_id, calls, last_call_timestamp 
               FROM daily_command_stats 
               WHERE self_id = ? AND date = ? 
-              ORDER BY messages_sent DESC 
+              ORDER BY calls DESC 
               LIMIT ?`
 	rows, err := db.Query(query, selfId, date.Format("2006-01-02"), rank)
 	if err != nil {
