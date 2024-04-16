@@ -172,12 +172,16 @@ type CommandStat struct {
 	LastCallTimestamp int64  `json:"last_call_timestamp"`
 }
 
-func FetchTopCommands(db *sql.DB, rank int) ([]CommandStat, error) {
-	query := `SELECT command_name, self_id, total_calls, last_call_timestamp FROM command_stats ORDER BY total_calls DESC LIMIT ?`
-	rows, err := db.Query(query, rank)
+func FetchTopCommands(db *sql.DB, selfId int64, rank int) ([]CommandStat, error) {
+	query := `SELECT command_name, self_id, total_calls, last_call_timestamp 
+              FROM command_stats 
+              WHERE self_id = ? 
+              ORDER BY total_calls DESC 
+              LIMIT ?`
+	rows, err := db.Query(query, selfId, rank)
 	if err != nil {
-		log.Printf("Error querying top commands: %v", err)
-		return nil, fmt.Errorf("error querying top commands: %w", err)
+		log.Printf("Error querying top commands for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error querying top commands for selfId %d: %w", selfId, err)
 	}
 	defer rows.Close()
 
@@ -185,26 +189,30 @@ func FetchTopCommands(db *sql.DB, rank int) ([]CommandStat, error) {
 	for rows.Next() {
 		var stat CommandStat
 		if err := rows.Scan(&stat.CommandName, &stat.SelfID, &stat.TotalCalls, &stat.LastCallTimestamp); err != nil {
-			log.Printf("Error reading command stats: %v", err)
-			return nil, fmt.Errorf("error reading command stats: %w", err)
+			log.Printf("Error reading command stats for selfId %d: %v", selfId, err)
+			return nil, fmt.Errorf("error reading command stats for selfId %d: %w", selfId, err)
 		}
 		results = append(results, stat)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error during rows iteration: %v", err)
-		return nil, fmt.Errorf("error during rows iteration: %w", err)
+		log.Printf("Error during rows iteration for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error during rows iteration for selfId %d: %w", selfId, err)
 	}
 
 	return results, nil
 }
 
-func FetchTopDailyCommands(db *sql.DB, date time.Time, rank int) ([]CommandStat, error) {
-	query := `SELECT command_name, self_id, calls, last_call_timestamp FROM daily_command_stats WHERE date = ? ORDER BY calls DESC LIMIT ?`
-	rows, err := db.Query(query, date.Format("2006-01-02"), rank)
+func FetchTopDailyCommands(db *sql.DB, selfId int64, date time.Time, rank int) ([]CommandStat, error) {
+	query := `SELECT command_name, self_id, messages_sent, last_call_timestamp 
+              FROM daily_command_stats 
+              WHERE self_id = ? AND date = ? 
+              ORDER BY messages_sent DESC 
+              LIMIT ?`
+	rows, err := db.Query(query, selfId, date.Format("2006-01-02"), rank)
 	if err != nil {
-		log.Printf("Error querying daily top commands: %v", err)
-		return nil, fmt.Errorf("error querying daily top commands: %w", err)
+		log.Printf("Error querying daily top commands for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error querying daily top commands for selfId %d: %w", selfId, err)
 	}
 	defer rows.Close()
 
@@ -212,15 +220,15 @@ func FetchTopDailyCommands(db *sql.DB, date time.Time, rank int) ([]CommandStat,
 	for rows.Next() {
 		var stat CommandStat
 		if err := rows.Scan(&stat.CommandName, &stat.SelfID, &stat.TotalCalls, &stat.LastCallTimestamp); err != nil {
-			log.Printf("Error reading daily command stats: %v", err)
-			return nil, fmt.Errorf("error reading daily command stats: %w", err)
+			log.Printf("Error reading daily command stats for selfId %d: %v", selfId, err)
+			return nil, fmt.Errorf("error reading daily command stats for selfId %d: %w", selfId, err)
 		}
 		results = append(results, stat)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error during rows iteration: %v", err)
-		return nil, fmt.Errorf("error during rows iteration: %w", err)
+		log.Printf("Error during rows iteration for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error during rows iteration for selfId %d: %w", selfId, err)
 	}
 
 	return results, nil
@@ -237,15 +245,16 @@ type GroupStat struct {
 	Date                   string `json:"date,omitempty"`           // Only for daily stats
 }
 
-func FetchTopGroups(db *sql.DB, rank int) ([]GroupStat, error) {
+func FetchTopGroups(db *sql.DB, selfId int64, rank int) ([]GroupStat, error) {
 	query := `SELECT group_id, self_id, total_messages_sent, last_message_timestamp, consecutive_message_days 
               FROM group_stats 
+              WHERE self_id = ? 
               ORDER BY total_messages_sent DESC 
               LIMIT ?`
-	rows, err := db.Query(query, rank)
+	rows, err := db.Query(query, selfId, rank)
 	if err != nil {
-		log.Printf("Error querying top groups: %v", err)
-		return nil, fmt.Errorf("error querying top groups: %w", err)
+		log.Printf("Error querying top groups for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error querying top groups for selfId %d: %w", selfId, err)
 	}
 	defer rows.Close()
 
@@ -253,30 +262,32 @@ func FetchTopGroups(db *sql.DB, rank int) ([]GroupStat, error) {
 	for rows.Next() {
 		var stat GroupStat
 		if err := rows.Scan(&stat.GroupID, &stat.SelfID, &stat.TotalMessagesSent, &stat.LastMessageTimestamp, &stat.ConsecutiveMessageDays); err != nil {
-			log.Printf("Error reading group stats: %v", err)
-			return nil, fmt.Errorf("error reading group stats: %w", err)
+			log.Printf("Error reading group stats for selfId %d: %v", selfId, err)
+			return nil, fmt.Errorf("error reading group stats for selfId %d: %w", selfId, err)
 		}
 		results = append(results, stat)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error during rows iteration: %v", err)
-		return nil, fmt.Errorf("error during rows iteration: %w", err)
+		log.Printf("Error during rows iteration for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error during rows iteration for selfId %d: %w", selfId, err)
 	}
 
 	return results, nil
 }
 
-func FetchTopDailyGroups(db *sql.DB, date time.Time, rank int) ([]GroupStat, error) {
+func FetchTopDailyGroups(db *sql.DB, selfId int64, date time.Time, rank int) ([]GroupStat, error) {
+	// Updated SQL query to include selfId in the WHERE clause
 	query := `SELECT group_id, self_id, messages_sent, active_members, date 
               FROM daily_group_stats 
-              WHERE date = ? 
+              WHERE self_id = ? AND date = ? 
               ORDER BY messages_sent DESC 
               LIMIT ?`
-	rows, err := db.Query(query, date.Format("2006-01-02"), rank)
+	// Pass selfId along with date and rank to the query
+	rows, err := db.Query(query, selfId, date.Format("2006-01-02"), rank)
 	if err != nil {
-		log.Printf("Error querying daily top groups: %v", err)
-		return nil, fmt.Errorf("error querying daily top groups: %w", err)
+		log.Printf("Error querying daily top groups for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error querying daily top groups for selfId %d: %w", selfId, err)
 	}
 	defer rows.Close()
 
@@ -284,15 +295,15 @@ func FetchTopDailyGroups(db *sql.DB, date time.Time, rank int) ([]GroupStat, err
 	for rows.Next() {
 		var stat GroupStat
 		if err := rows.Scan(&stat.GroupID, &stat.SelfID, &stat.MessagesSent, &stat.ActiveMembers, &stat.Date); err != nil {
-			log.Printf("Error reading daily group stats: %v", err)
-			return nil, fmt.Errorf("error reading daily group stats: %w", err)
+			log.Printf("Error reading daily group stats for selfId %d: %v", selfId, err)
+			return nil, fmt.Errorf("error reading daily group stats for selfId %d: %w", selfId, err)
 		}
 		results = append(results, stat)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error during rows iteration: %v", err)
-		return nil, fmt.Errorf("error during rows iteration: %w", err)
+		log.Printf("Error during rows iteration for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error during rows iteration for selfId %d: %w", selfId, err)
 	}
 
 	return results, nil
@@ -311,15 +322,16 @@ type UserStat struct {
 	Date                   string `json:"date,omitempty"`                    // Only for daily stats
 }
 
-func FetchTopUsers(db *sql.DB, rank int) ([]UserStat, error) {
+func FetchTopUsers(db *sql.DB, selfId int64, rank int) ([]UserStat, error) {
 	query := `SELECT user_id, self_id, nickname, role, total_messages_sent, last_message_timestamp, consecutive_message_days 
               FROM user_stats 
+              WHERE self_id = ? 
               ORDER BY total_messages_sent DESC 
               LIMIT ?`
-	rows, err := db.Query(query, rank)
+	rows, err := db.Query(query, selfId, rank)
 	if err != nil {
-		log.Printf("Error querying top users: %v", err)
-		return nil, fmt.Errorf("error querying top users: %w", err)
+		log.Printf("Error querying top users for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error querying top users for selfId %d: %w", selfId, err)
 	}
 	defer rows.Close()
 
@@ -327,30 +339,30 @@ func FetchTopUsers(db *sql.DB, rank int) ([]UserStat, error) {
 	for rows.Next() {
 		var stat UserStat
 		if err := rows.Scan(&stat.UserID, &stat.SelfID, &stat.Nickname, &stat.Role, &stat.TotalMessagesSent, &stat.LastMessageTimestamp, &stat.ConsecutiveMessageDays); err != nil {
-			log.Printf("Error reading user stats: %v", err)
-			return nil, fmt.Errorf("error reading user stats: %w", err)
+			log.Printf("Error reading user stats for selfId %d: %v", selfId, err)
+			return nil, fmt.Errorf("error reading user stats for selfId %d: %w", selfId, err)
 		}
 		results = append(results, stat)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error during rows iteration: %v", err)
-		return nil, fmt.Errorf("error during rows iteration: %w", err)
+		log.Printf("Error during rows iteration for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error during rows iteration for selfId %d: %w", selfId, err)
 	}
 
 	return results, nil
 }
 
-func FetchTopDailyUsers(db *sql.DB, date time.Time, rank int) ([]UserStat, error) {
+func FetchTopDailyUsers(db *sql.DB, selfId int64, date time.Time, rank int) ([]UserStat, error) {
 	query := `SELECT user_id, self_id, nickname, role, messages_sent, last_message_timestamp, included_in_group_count, date 
               FROM daily_user_stats 
-              WHERE date = ? 
+              WHERE self_id = ? AND date = ? 
               ORDER BY messages_sent DESC 
               LIMIT ?`
-	rows, err := db.Query(query, date.Format("2006-01-02"), rank)
+	rows, err := db.Query(query, selfId, date.Format("2006-01-02"), rank)
 	if err != nil {
-		log.Printf("Error querying daily top users: %v", err)
-		return nil, fmt.Errorf("error querying daily top users: %w", err)
+		log.Printf("Error querying daily top users for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error querying daily top users for selfId %d: %w", selfId, err)
 	}
 	defer rows.Close()
 
@@ -358,15 +370,15 @@ func FetchTopDailyUsers(db *sql.DB, date time.Time, rank int) ([]UserStat, error
 	for rows.Next() {
 		var stat UserStat
 		if err := rows.Scan(&stat.UserID, &stat.SelfID, &stat.Nickname, &stat.Role, &stat.MessagesSent, &stat.LastMessageTimestamp, &stat.IncludedInGroupCount, &stat.Date); err != nil {
-			log.Printf("Error reading daily user stats: %v", err)
-			return nil, fmt.Errorf("error reading daily user stats: %w", err)
+			log.Printf("Error reading daily user stats for selfId %d: %v", selfId, err)
+			return nil, fmt.Errorf("error reading daily user stats for selfId %d: %w", selfId, err)
 		}
 		results = append(results, stat)
 	}
 
 	if err = rows.Err(); err != nil {
-		log.Printf("Error during rows iteration: %v", err)
-		return nil, fmt.Errorf("error during rows iteration: %w", err)
+		log.Printf("Error during rows iteration for selfId %d: %v", selfId, err)
+		return nil, fmt.Errorf("error during rows iteration for selfId %d: %w", selfId, err)
 	}
 
 	return results, nil

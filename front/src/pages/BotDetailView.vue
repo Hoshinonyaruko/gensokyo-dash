@@ -166,7 +166,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 const route = useRoute();
 const router = useRouter();
-const selfId = ref(route.params.selfId); // 从路由参数获取 selfId
+const selfId = ref(null);
 
 const selectedDays = ref(7);
 const dayOptions = ref([
@@ -361,27 +361,35 @@ const columnsUserDaily = [
   },
 ];
 
+onMounted(() => {
+  selfId.value = route.params.selfId;
+});
+
 function loadMoreMetrics() {
-  if (!rank.value || !date.value) {
-    console.error('Date and rank are required.');
+  if (!rank.value || !date.value || !selfId.value) {
+    console.error('Date, rank, and selfId are required.');
     return;
   }
 
   Promise.all([
-    fetch(`/webui/api/command-all?rank=${rank.value}`).then((res) =>
-      res.json()
+    fetch(
+      `/webui/api/command-all?rank=${rank.value}&selfId=${selfId.value}`
+    ).then((res) => res.json()),
+    fetch(
+      `/webui/api/command-daily?date=${date.value}&rank=${rank.value}&selfId=${selfId.value}`
+    ).then((res) => res.json()),
+    fetch(
+      `/webui/api/group-all?rank=${rank.value}&selfId=${selfId.value}`
+    ).then((res) => res.json()),
+    fetch(
+      `/webui/api/group-daily?date=${date.value}&rank=${rank.value}&selfId=${selfId.value}`
+    ).then((res) => res.json()),
+    fetch(`/webui/api/user-all?rank=${rank.value}&selfId=${selfId.value}`).then(
+      (res) => res.json()
     ),
     fetch(
-      `/webui/api/command-daily?date=${date.value}&rank=${rank.value}`
+      `/webui/api/user-daily?date=${date.value}&rank=${rank.value}&selfId=${selfId.value}`
     ).then((res) => res.json()),
-    fetch(`/webui/api/group-all?rank=${rank.value}`).then((res) => res.json()),
-    fetch(`/webui/api/group-daily?date=${date.value}&rank=${rank.value}`).then(
-      (res) => res.json()
-    ),
-    fetch(`/webui/api/user-all?rank=${rank.value}`).then((res) => res.json()),
-    fetch(`/webui/api/user-daily?date=${date.value}&rank=${rank.value}`).then(
-      (res) => res.json()
-    ),
   ])
     .then(
       ([
