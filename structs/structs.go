@@ -183,13 +183,13 @@ type Message struct {
 }
 
 type MessageEvent struct {
-	PostType    string `json:"post_type"`
-	MessageType string `json:"message_type"`
-	Time        int64  `json:"time"`
-	SelfID      int64  `json:"self_id"`
-	SubType     string `json:"sub_type"`
-	Message     string `json:"message"`
-	RawMessage  string `json:"raw_message"`
+	PostType    string      `json:"post_type"`
+	MessageType string      `json:"message_type"`
+	Time        int64       `json:"time"`
+	SelfID      int64       `json:"self_id"`
+	SubType     string      `json:"sub_type"`
+	Message     interface{} `json:"message"`
+	RawMessage  string      `json:"raw_message"`
 	Sender      struct {
 		Age      int    `json:"age"`
 		Area     string `json:"area"`
