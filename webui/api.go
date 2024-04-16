@@ -414,13 +414,19 @@ func HandleApiInfo(c *gin.Context, cfg config.Config, db *sql.DB) {
 }
 
 func HandleCommandAll(c *gin.Context, config *config.Config, db *sql.DB) {
+	selfId, err := strconv.ParseInt(c.Query("selfId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing selfId parameter"})
+		return
+	}
+
 	rank, err := strconv.Atoi(c.Query("rank"))
 	if err != nil || rank <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing rank parameter"})
 		return
 	}
 
-	commands, err := sqlite.FetchTopCommands(db, rank)
+	commands, err := sqlite.FetchTopCommands(db, selfId, rank)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -430,6 +436,12 @@ func HandleCommandAll(c *gin.Context, config *config.Config, db *sql.DB) {
 }
 
 func HandleCommandDaily(c *gin.Context, config *config.Config, db *sql.DB) {
+	selfId, err := strconv.ParseInt(c.Query("selfId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing selfId parameter"})
+		return
+	}
+
 	dateStr := c.Query("date")
 	rank, err := strconv.Atoi(c.Query("rank"))
 	if err != nil || rank <= 0 {
@@ -443,7 +455,7 @@ func HandleCommandDaily(c *gin.Context, config *config.Config, db *sql.DB) {
 		return
 	}
 
-	commands, err := sqlite.FetchTopDailyCommands(db, date, rank)
+	commands, err := sqlite.FetchTopDailyCommands(db, selfId, date, rank)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -453,13 +465,19 @@ func HandleCommandDaily(c *gin.Context, config *config.Config, db *sql.DB) {
 }
 
 func HandleGroupAll(c *gin.Context, db *sql.DB) {
+	selfId, err := strconv.ParseInt(c.Query("selfId"), 10, 64)
+	if err != nil || selfId <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing selfId parameter"})
+		return
+	}
+
 	rank, err := strconv.Atoi(c.Query("rank"))
 	if err != nil || rank <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing rank parameter"})
 		return
 	}
 
-	groups, err := sqlite.FetchTopGroups(db, rank)
+	groups, err := sqlite.FetchTopGroups(db, selfId, rank)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -469,6 +487,12 @@ func HandleGroupAll(c *gin.Context, db *sql.DB) {
 }
 
 func HandleGroupDaily(c *gin.Context, db *sql.DB) {
+	selfId, err := strconv.ParseInt(c.Query("selfId"), 10, 64)
+	if err != nil || selfId <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing selfId parameter"})
+		return
+	}
+
 	dateStr := c.Query("date")
 	rank, err := strconv.Atoi(c.Query("rank"))
 	if err != nil || rank <= 0 {
@@ -482,7 +506,7 @@ func HandleGroupDaily(c *gin.Context, db *sql.DB) {
 		return
 	}
 
-	groups, err := sqlite.FetchTopDailyGroups(db, date, rank)
+	groups, err := sqlite.FetchTopDailyGroups(db, selfId, date, rank)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -492,13 +516,19 @@ func HandleGroupDaily(c *gin.Context, db *sql.DB) {
 }
 
 func HandleUserAll(c *gin.Context, db *sql.DB) {
+	selfId, err := strconv.ParseInt(c.Query("selfId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing selfId parameter"})
+		return
+	}
+
 	rank, err := strconv.Atoi(c.Query("rank"))
 	if err != nil || rank <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing rank parameter"})
 		return
 	}
 
-	users, err := sqlite.FetchTopUsers(db, rank)
+	users, err := sqlite.FetchTopUsers(db, selfId, rank)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -508,6 +538,12 @@ func HandleUserAll(c *gin.Context, db *sql.DB) {
 }
 
 func HandleUserDaily(c *gin.Context, db *sql.DB) {
+	selfId, err := strconv.ParseInt(c.Query("selfId"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid or missing selfId parameter"})
+		return
+	}
+
 	dateStr := c.Query("date")
 	rank, err := strconv.Atoi(c.Query("rank"))
 	if err != nil || rank <= 0 {
@@ -521,7 +557,7 @@ func HandleUserDaily(c *gin.Context, db *sql.DB) {
 		return
 	}
 
-	users, err := sqlite.FetchTopDailyUsers(db, date, rank)
+	users, err := sqlite.FetchTopDailyUsers(db, selfId, date, rank)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
