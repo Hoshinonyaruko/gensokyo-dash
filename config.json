@@ -1,0 +1,30 @@
+{
+    "account": "admin",
+    "password": "admin",
+    "title": "牛子测试",
+    "wspath": "nil",
+    "port": "18630",
+    "useHttps": false,
+    "cert": "",
+    "key": "",
+    "enableWsServer": true,
+    "wsServerToken": "",
+    "apis": [
+        {
+            "apiPaths": "http://127.0.0.1:18630",
+            "apiNames": "自身"
+        }
+    ],
+    "botInfos": [
+        {
+            "botId": "3003535849",
+            "botNickname": "澪",
+            "botHead": "images/head.gif"
+        },
+        {
+            "botId": "3003535848",
+            "botNickname": "浅羽",
+            "botHead": "images/head.gif"
+        }
+    ]
+}
