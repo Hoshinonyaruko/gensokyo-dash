@@ -73,8 +73,8 @@ func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 		messages_sent = daily_user_stats.messages_sent + 1,
 		last_message_timestamp = excluded.last_message_timestamp,
 		included_in_group_count = CASE
-			WHEN strftime('%Y-%m-%d', daily_user_stats.last_message_timestamp, 'unixepoch') != strftime('%Y-%m-%d', excluded.last_message_timestamp, 'unixepoch') THEN TRUE
-			ELSE FALSE
+			WHEN daily_user_stats.messages_sent = 0 THEN TRUE
+			ELSE daily_user_stats.included_in_group_count
 		END
 	`
 	if _, err := db.Exec(dailyUserSQL, event.UserID, event.SelfID, currentDate, event.Sender.Nickname, event.Sender.Role, event.Time, event.Time); err != nil {
@@ -230,6 +230,7 @@ func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 		if result, err := tx.Exec(updateRobotStatsSQL, event.Time, event.SelfID, currentDate); err != nil {
 			return fmt.Errorf("error updating robot status: %v", err)
 		} else if affected, _ := result.RowsAffected(); affected == 0 {
+			log.Printf("No rows updated for self_id %d on date %s", event.SelfID, currentDate)
 			// 插入新记录，因为当天没有现有记录
 			insertSQL := `
         INSERT INTO robot_status (self_id, date, online, message_received, message_sent, last_message_time, daily_dau)
@@ -254,25 +255,60 @@ func ProcessMetaEvent(db *sql.DB, event structs.MetaEvent) error {
 	currentDate := time.Now().Format("2006-01-02") // Get current date in YYYY-MM-DD format
 
 	// Use INSERT OR REPLACE to handle the primary key constraint of self_id and date
-	upsertSQL := `
-    INSERT OR REPLACE INTO robot_status (
-        self_id, date, online, message_received, message_sent, last_message_time)
-    VALUES (?, ?, ?, ?, ?, ?);`
+	// 尝试Upsert更新现有记录
+	updateSQL := `
+	UPDATE robot_status
+	SET
+		online = ?,
+		message_received = ?,
+		message_sent = ?,
+		last_message_time = ?
+	WHERE self_id = ? AND date = ?;`
 
-	_, err := db.Exec(upsertSQL,
-		event.SelfID,
-		currentDate,
+	result, err := db.Exec(updateSQL,
 		event.Status.Online,
 		event.Status.Stat.MessageReceived,
 		event.Status.Stat.MessageSent,
-		event.Status.Stat.LastMessageTime)
+		event.Status.Stat.LastMessageTime,
+		event.SelfID,
+		currentDate)
+
 	if err != nil {
-		log.Printf("Error upserting robot status: %v", err)
-		return fmt.Errorf("error upserting robot status: %w", err)
+		log.Printf("Error updating robot status: %v", err)
+		return fmt.Errorf("error updating robot status: %w", err)
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error checking affected rows: %v", err)
+		return fmt.Errorf("error checking affected rows: %w", err)
+	}
+
+	// 如果没有记录被更新，插入新记录
+	if affected == 0 {
+		insertSQL := `
+		INSERT INTO robot_status (self_id, date, online, message_received, message_sent, last_message_time)
+		VALUES (?, ?, ?, ?, ?, ?);`
+
+		_, err = db.Exec(insertSQL,
+			event.SelfID,
+			currentDate,
+			event.Status.Online,
+			event.Status.Stat.MessageReceived,
+			event.Status.Stat.MessageSent,
+			event.Status.Stat.LastMessageTime)
+
+		if err != nil {
+			log.Printf("Error inserting new robot status: %v", err)
+			return fmt.Errorf("error inserting new robot status: %w", err)
+		}
+
+		log.Println("Inserted new robot status successfully for SelfID:", event.SelfID)
 	}
 
 	log.Println("Upserted robot status successfully for SelfID:", event.SelfID)
 	return nil
+
 }
 
 // ProcessNoticeEvent 基于事件记录机器人信息

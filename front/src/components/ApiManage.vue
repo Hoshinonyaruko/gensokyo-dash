@@ -20,14 +20,6 @@
       bordered
       :rows-per-page-options="[7, 15, 30]"
     >
-      <template v-slot:body-cell-online="{ props }">
-        <q-td :props="props">
-          <q-icon
-            :name="props.row.online ? 'check_circle' : 'cancel'"
-            :color="props.row.online ? 'green' : 'red'"
-          />
-        </q-td>
-      </template>
     </q-table>
   </q-page>
 </template>
