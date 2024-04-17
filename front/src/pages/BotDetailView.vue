@@ -267,7 +267,6 @@ const columnsCommand = [
 
 const columnsGroupAll = [
   { name: 'groupID', label: '群组ID', field: 'group_id', sortable: true },
-  { name: 'selfID', label: '自身ID', field: 'self_id', sortable: true },
   {
     name: 'totalMessagesSent',
     label: '总消息发送数',
@@ -290,11 +289,19 @@ const columnsGroupAll = [
 ];
 
 const columnsGroupDaily = [
+  { name: 'groupID', label: '群组ID', field: 'group_id', sortable: true },
   { name: 'date', label: '日期', field: 'date', sortable: true },
   {
     name: 'messagesSent',
     label: '发送消息数',
     field: 'messages_sent',
+    sortable: true,
+  },
+  {
+    name: 'lastMessageTimestamp',
+    label: '最后消息时间',
+    field: 'last_message_timestamp',
+    format: (val) => new Date(val * 1000).toLocaleString(),
     sortable: true,
   },
   {
@@ -331,24 +338,14 @@ const columnsUserAll = [
 ];
 
 const columnsUserDaily = [
+  { name: 'userID', label: '用户ID', field: 'user_id', sortable: true },
+  { name: 'nickname', label: '昵称', field: 'nickname', sortable: true },
+  { name: 'role', label: '角色', field: 'role', sortable: true },
   { name: 'date', label: '日期', field: 'date', sortable: true },
   {
     name: 'messagesSent',
     label: '消息数',
     field: 'messages_sent',
-    sortable: true,
-  },
-  {
-    name: 'activeMembers',
-    label: '活跃成员',
-    field: 'active_members',
-    sortable: true,
-  },
-  {
-    name: 'includedInGroupCount',
-    label: '群组计数包含',
-    field: 'included_in_group_count',
-    format: (val) => (val ? '是' : '否'),
     sortable: true,
   },
 ];
