@@ -62,6 +62,10 @@ func parseCommandName(rawMessage string) string {
 func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 	// 当前时间戳和日期，提前计算
 	currentDate := time.Unix(event.Time, 0).Format("2006-01-02")
+	// // 获取当前时间
+	// currentTime := time.Now()
+	// // 转换为10位时间戳（秒）
+	// tenDigitTimestamp := currentTime.Unix() // Unix方法返回一个int64类型的10位时间戳
 
 	// 更新或插入每日用户统计
 	dailyUserSQL := `
@@ -84,19 +88,20 @@ func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 
 	// 更新总用户统计
 	userSQL := `
-	 INSERT INTO user_stats (user_id, self_id, nickname, role, total_messages_sent, last_message_timestamp, consecutive_message_days)
-	 VALUES (?, ?, ?, ?, 1, ?, 1)
-	 ON CONFLICT(user_id) DO UPDATE SET
-		 nickname = excluded.nickname,
-		 role = excluded.role,
-		 total_messages_sent = user_stats.total_messages_sent + 1,
-		 last_message_timestamp = excluded.last_message_timestamp,
-		 consecutive_message_days = CASE 
-			 WHEN strftime('%Y-%m-%d', user_stats.last_message_timestamp, 'unixepoch', '+1 day') = strftime('%Y-%m-%d', ?, 'unixepoch') THEN user_stats.consecutive_message_days + 1 
-			 ELSE 1 
-		 END
-	 `
-	if _, err := db.Exec(userSQL, event.UserID, event.SelfID, event.Sender.Nickname, event.Sender.Role, event.Time, currentDate); err != nil {
+	INSERT INTO user_stats (user_id, self_id, nickname, role, total_messages_sent, last_message_timestamp, consecutive_message_days)
+	VALUES (?, ?, ?, ?, 1, ?, 1)
+	ON CONFLICT(user_id) DO UPDATE SET
+		nickname = excluded.nickname,
+		role = excluded.role,
+		total_messages_sent = user_stats.total_messages_sent + 1,
+		last_message_timestamp = excluded.last_message_timestamp,
+		consecutive_message_days = CASE 
+			WHEN date(user_stats.last_message_timestamp, 'unixepoch', '+1 day') = date(?, 'unixepoch') THEN user_stats.consecutive_message_days + 1 
+			WHEN date(user_stats.last_message_timestamp, 'unixepoch') < date(?, 'unixepoch') THEN 1
+			ELSE consecutive_message_days
+		END
+	`
+	if _, err := db.Exec(userSQL, event.UserID, event.SelfID, event.Sender.Nickname, event.Sender.Role, event.Time, event.Time, event.Time); err != nil {
 		log.Printf("Error updating user stats: %v", err)
 		return err
 	}
@@ -179,16 +184,22 @@ func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 	}
 
 	// 更新 群发信息条数 总
-
-	updateTotalMessagesSQL := `
-	INSERT INTO group_stats (group_id, self_id, total_messages_sent, last_message_timestamp)
-	VALUES (?, ?, 1, ?)
+	updateSQL := `
+	INSERT INTO group_stats (group_id, self_id, total_messages_sent, last_message_timestamp, consecutive_message_days)
+	VALUES (?, ?, 1, ?, 1)
 	ON CONFLICT(group_id) DO UPDATE SET
 		total_messages_sent = group_stats.total_messages_sent + 1,
-		last_message_timestamp = excluded.last_message_timestamp;
+		last_message_timestamp = excluded.last_message_timestamp,
+		consecutive_message_days = CASE
+			WHEN date(group_stats.last_message_timestamp, 'unixepoch') = date(?, 'unixepoch', '-1 day') THEN group_stats.consecutive_message_days + 1
+			WHEN date(group_stats.last_message_timestamp, 'unixepoch') < date(?, 'unixepoch') THEN 1
+			ELSE group_stats.consecutive_message_days
+		END;
 	`
-	if _, err := tx.Exec(updateTotalMessagesSQL, event.GroupID, event.SelfID, event.Time); err != nil {
-		return fmt.Errorf("error updating total messages sent in group stats: %v", err)
+	_, err = tx.Exec(updateSQL, event.GroupID, event.SelfID, event.Time, event.Time, event.Time)
+	if err != nil {
+		log.Printf("Error updating group stats: %v", err)
+		return fmt.Errorf("error updating group stats: %w", err)
 	}
 
 	// 下方分支 每个用户每天仅第一次调用会统计
@@ -203,20 +214,6 @@ func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 		`
 		if _, err := tx.Exec(updateActiveMembersSQL, event.GroupID, event.SelfID, currentDate); err != nil {
 			return fmt.Errorf("error updating active members in daily group stats: %v", err)
-		}
-
-		// 更新累积群组连续活跃天数统计
-		updateConsecutiveDaysSQL := `
-		UPDATE group_stats
-		SET consecutive_message_days = CASE
-			WHEN date(julianday(?, 'unixepoch')) = date(julianday(last_message_timestamp, 'unixepoch') + 1) THEN consecutive_message_days + 1
-			WHEN date(julianday(?, 'unixepoch')) > date(julianday(last_message_timestamp, 'unixepoch') + 1) THEN 1
-			ELSE consecutive_message_days
-		END
-		WHERE group_id = ?;`
-
-		if _, err := tx.Exec(updateConsecutiveDaysSQL, event.Time, event.Time, event.GroupID); err != nil {
-			return fmt.Errorf("error updating consecutive message days in group stats: %v", err)
 		}
 
 		// 更新机器人状态表，每接收到一个当日新用户，活跃度（daily_dau）加1

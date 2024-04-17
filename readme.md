@@ -46,6 +46,8 @@ _✨ 基于 [OneBot](https://github.com/howmanybots/onebot/blob/master/README.md
 
 ## 介绍
 
+用法:onebotv11标准机器人连接到反向地址ws://127.0.0.1:18630
+
 独立的机器人数据统计框架,不再漫无目标,让数据与思考驱动高质量运营。
 
 gensokyo-dashboard是为运营多个机器人的im机器人运营者打造的状态和数据监测工具,随时查看多个机器人在线和发送状态,可以跟踪多项指标,助你提高dau和运营质量.
