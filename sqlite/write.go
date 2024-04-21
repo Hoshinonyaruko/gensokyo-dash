@@ -108,7 +108,7 @@ func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 
 	// 获取用户的 included_in_group_count 状态
 	var includedInGroupCount bool
-	err := db.QueryRow("SELECT included_in_group_count FROM daily_user_stats WHERE user_id = ?", event.UserID).Scan(&includedInGroupCount)
+	err := db.QueryRow("SELECT included_in_group_count FROM daily_user_stats WHERE user_id = ? AND date = ?", event.UserID, currentDate).Scan(&includedInGroupCount)
 	if err != nil {
 		log.Printf("Error fetching included_in_group_count: %v", err)
 		return fmt.Errorf("error fetching included_in_group_count: %v", err)
@@ -238,10 +238,14 @@ func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 		}
 
 		// 更新用户 included_in_group_count 状态为 FALSE 下次不运行includedInGroupCount分支
-		updateUserGroupCountSQL := "UPDATE daily_user_stats SET included_in_group_count = FALSE WHERE user_id = ?"
-		if _, err := tx.Exec(updateUserGroupCountSQL, event.UserID); err != nil {
+		updateUserGroupCountSQL := `
+		UPDATE daily_user_stats 
+		SET included_in_group_count = FALSE 
+		WHERE user_id = ? AND date = ?`
+		if _, err := tx.Exec(updateUserGroupCountSQL, event.UserID, currentDate); err != nil {
 			return fmt.Errorf("error updating user included_in_group_count: %v", err)
 		}
+
 	}
 
 	return nil
