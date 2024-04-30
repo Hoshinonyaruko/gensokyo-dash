@@ -166,12 +166,12 @@ const route = useRoute();
 const router = useRouter();
 const selfId = ref(null);
 
-const selectedDays = ref(7);
 const dayOptions = ref([
   { label: '7天', value: 7 },
   { label: '15天', value: 15 },
   { label: '30天', value: 30 },
 ]);
+const selectedDays = ref(dayOptions.value[0]);
 
 const robotStatuses = ref([]);
 const onlineData = ref([]);
@@ -412,7 +412,7 @@ function formatDate(dateString) {
 }
 
 function fetchData() {
-  const url = `/webui/api/robot-info-all?selfID=${selfId.value}&days=${selectedDays.value}`;
+  const url = `/webui/api/robot-info-all?selfID=${selfId.value}&days=${selectedDays.value.value}`;
   fetch(url)
     .then((response) => response.json())
     .then((data) => {
