@@ -5,8 +5,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/hoshinonyaruko/gensokyo-dashboard/config"
@@ -43,6 +44,7 @@ func FetchOnlineRobots(db *sql.DB, cfg *config.Config) ([]byte, error) {
 	defer rows.Close()
 
 	var robots []RobotStatus
+	onlineBots := make(map[string]bool) // Map to track which bots are online
 	for rows.Next() {
 		var robot RobotStatus
 		err = rows.Scan(&robot.SelfID, &robot.MessageReceived, &robot.MessageSent, &robot.LastMessageTime,
@@ -56,7 +58,7 @@ func FetchOnlineRobots(db *sql.DB, cfg *config.Config) ([]byte, error) {
 		for _, botInfo := range cfg.BotInfos {
 			if fmt.Sprintf("%d", robot.SelfID) == botInfo.BotID {
 				robot.Nickname = botInfo.BotNickname
-				imgData, imgErr := ioutil.ReadFile(botInfo.BotHead)
+				imgData, imgErr := os.ReadFile(botInfo.BotHead)
 				if imgErr == nil {
 					robot.ImgHead = base64.StdEncoding.EncodeToString(imgData)
 				} else {
@@ -79,11 +81,32 @@ func FetchOnlineRobots(db *sql.DB, cfg *config.Config) ([]byte, error) {
 			config.WriteConfigToFile(*cfg)
 		}
 
+		onlineBots[fmt.Sprintf("%d", robot.SelfID)] = true // Mark this bot as online
 		robots = append(robots, robot)
 	}
 
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("error iterating over robot status rows for today: %w", err)
+	}
+
+	// Append offline robots
+	for _, botInfo := range cfg.BotInfos {
+		if !onlineBots[botInfo.BotID] {
+			imgData, _ := os.ReadFile(botInfo.BotHead)
+			botid64, _ := strconv.ParseInt(botInfo.BotID, 10, 64)
+			robots = append(robots, RobotStatus{
+				SelfID:          botid64,
+				MessageReceived: 0,
+				MessageSent:     0,
+				LastMessageTime: 0,
+				InvitesReceived: 0,
+				KicksReceived:   0,
+				DailyDAU:        0,
+				Nickname:        botInfo.BotNickname,
+				ImgHead:         base64.StdEncoding.EncodeToString(imgData),
+				IsOnline:        false,
+			})
+		}
 	}
 
 	jsonData, err := json.Marshal(robots)
