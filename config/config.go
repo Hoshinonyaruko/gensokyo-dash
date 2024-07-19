@@ -18,6 +18,8 @@ type Config struct {
 	WsPath         string    `json:"wspath"`         // 默认监听裸端点
 	Port           string    `json:"port"`           // WebUI端口
 	UseHttps       bool      `json:"useHttps"`       // 使用 https
+	StoreMsgs      bool      `json:"storeMsgs"`      // 储存每条信息 用于详细分析
+	PrintLogs      bool      `json:"printLogs"`      // 输出日志开关
 	Cert           string    `json:"cert"`           // 证书
 	Key            string    `json:"key"`            // 密钥
 	EnableWSServer bool      `json:"enableWsServer"` // 是否启用正向WS服务器
@@ -40,6 +42,8 @@ type Apis struct {
 // 默认配置
 var defaultConfig = Config{
 	UseHttps:       false,
+	StoreMsgs:      true,
+	PrintLogs:      true,
 	Cert:           "",
 	Key:            "",
 	Account:        "admin",
