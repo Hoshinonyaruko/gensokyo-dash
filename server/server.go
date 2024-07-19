@@ -110,13 +110,13 @@ func wsHandler(c *gin.Context, config config.Config, db *sql.DB) {
 		}
 
 		if messageType == websocket.TextMessage {
-			processWSMessage(p, db)
+			processWSMessage(p, db, config)
 		}
 	}
 }
 
 // 处理收到的信息
-func processWSMessage(msg []byte, db *sql.DB) {
+func processWSMessage(msg []byte, db *sql.DB, config config.Config) {
 	var genericMap map[string]interface{}
 	if err := json.Unmarshal(msg, &genericMap); err != nil {
 		log.Printf("Error unmarshalling message to map: %v, Original message: %s\n", err, string(msg))
@@ -132,7 +132,7 @@ func processWSMessage(msg []byte, db *sql.DB) {
 		}
 		fmt.Printf("Processed a notice event of type '%s' from group %d.\n", noticeEvent.NoticeType, noticeEvent.GroupID)
 		//进入快乐的处理流程 write
-		err := sqlite.ProcessNoticeEvent(db, noticeEvent)
+		err := sqlite.ProcessNoticeEvent(db, noticeEvent, config)
 		if err != nil {
 			fmt.Printf("sqlite.ProcessNoticeEvent error %v.\n", err)
 		}
@@ -144,9 +144,13 @@ func processWSMessage(msg []byte, db *sql.DB) {
 				log.Printf("Error unmarshalling message event: %v\n", err)
 				return
 			}
-			fmt.Printf("Processed a message event from group %d.\n", messageEvent.GroupID)
+
+			if config.PrintLogs {
+				fmt.Printf("Processed a message event from group %d.\n", messageEvent.GroupID)
+			}
+
 			//进入快乐的处理流程 write
-			err := sqlite.ProcessMessageEvent(db, messageEvent)
+			err := sqlite.ProcessMessageEvent(db, messageEvent, config)
 			if err != nil {
 				fmt.Printf("sqlite.ProcessMessageEvent error %v.\n", err)
 			}

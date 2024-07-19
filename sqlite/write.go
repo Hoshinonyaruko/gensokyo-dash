@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hoshinonyaruko/gensokyo-dashboard/config"
 	"github.com/hoshinonyaruko/gensokyo-dashboard/structs"
 )
 
@@ -59,7 +60,7 @@ func parseCommandName(rawMessage string) string {
 }
 
 // 处理消息事件
-func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
+func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent, config config.Config) error {
 	// 当前时间戳和日期，提前计算
 	currentDate := time.Unix(event.Time, 0).Format("2006-01-02")
 	// // 获取当前时间
@@ -132,19 +133,21 @@ func ProcessMessageEvent(db *sql.DB, event structs.MessageEvent) error {
 		}
 	}()
 
-	// 插入或更新消息到 messages 表
-	messageSQL := `
-    INSERT INTO messages (message_id, message_type, time, self_id, raw_message, user_id, group_id, message_date)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(message_id) DO UPDATE SET
-        message_type = excluded.message_type,
-        time = excluded.time,
-        raw_message = excluded.raw_message,
-        user_id = excluded.user_id,
-        group_id = excluded.group_id,
-        message_date = excluded.message_date;`
-	if _, err = tx.Exec(messageSQL, event.MessageID, event.MessageType, event.Time, event.SelfID, event.RawMessage, event.UserID, event.GroupID, currentDate); err != nil {
-		return fmt.Errorf("error inserting message: %v", err)
+	if config.StoreMsgs {
+		// 插入或更新消息到 messages 表
+		messageSQL := `
+		INSERT INTO messages (message_id, message_type, time, self_id, raw_message, user_id, group_id, message_date)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(message_id) DO UPDATE SET
+			message_type = excluded.message_type,
+			time = excluded.time,
+			raw_message = excluded.raw_message,
+			user_id = excluded.user_id,
+			group_id = excluded.group_id,
+			message_date = excluded.message_date;`
+		if _, err = tx.Exec(messageSQL, event.MessageID, event.MessageType, event.Time, event.SelfID, event.RawMessage, event.UserID, event.GroupID, currentDate); err != nil {
+			return fmt.Errorf("error inserting message: %v", err)
+		}
 	}
 
 	// 处理指令统计
@@ -313,7 +316,7 @@ func ProcessMetaEvent(db *sql.DB, event structs.MetaEvent) error {
 }
 
 // ProcessNoticeEvent 基于事件记录机器人信息
-func ProcessNoticeEvent(db *sql.DB, event structs.NoticeEvent) error {
+func ProcessNoticeEvent(db *sql.DB, event structs.NoticeEvent, config config.Config) error {
 	currentDate := time.Now().Format("2006-01-02") // 获取当前日期
 
 	if event.NoticeType == "group_increase" && event.SubType == "invite" {

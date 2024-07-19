@@ -36,6 +36,8 @@
         hint="输入WebUI监听的端口号"
       />
       <q-toggle filled v-model="config.useHttps" label="使用 HTTPS" />
+      <q-toggle filled v-model="config.storeMsgs" label="记录每条信息(用于分析数据)" />
+      <q-toggle filled v-model="config.printLogs" label="命令行日志输出(关闭日志输出节约性能)" />
       <q-input
         filled
         v-model="config.cert"
